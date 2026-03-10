@@ -1,4 +1,3 @@
-local core = require("change-in-line.core")
 local M = {}
 
 function M.setup(opts)
@@ -6,6 +5,7 @@ function M.setup(opts)
 end
 
 function M.change_in_quotes(action)
+	local core = require("change-in-line.core")
 	local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 	col = col + 1 -- col is 0-based so add 1 to fit lua's
 
