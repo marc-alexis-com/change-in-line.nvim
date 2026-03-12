@@ -4,7 +4,36 @@ end
 
 vim.g.loaded_change_in_line = 1
 
-vim.keymap.set("n", "ci\"", function() require("change-in-line").change_in_quotes("i") end,
-	{ desc = "change inside quote on current line", noremap = true })
-vim.keymap.set("n", "ca\"", function() require("change-in-line").change_in_quotes("a") end,
-	{ desc = "change around quote on current line", noremap = true })
+local function map(lhs, action, open, close, desc)
+	vim.keymap.set("n", lhs, function()
+		require("change-in-line").change_in_pairs(action, open, close)
+	end, { desc = desc, noremap = true })
+end
+
+-- double quotes
+map('ci"', "i", '"', '"', 'Change inside " on current line')
+map('ca"', "a", '"', '"', 'Change around " on current line')
+
+-- single quotes
+map("ci'", "i", "'", "'", "Change inside ' on current line")
+map("ca'", "a", "'", "'", "Change around ' on current line")
+
+-- backticks
+map("ci`", "i", "`", "`", "Change inside ` on current line")
+map("ca`", "a", "`", "`", "Change around ` on current line")
+
+-- parentheses
+map("ci(", "i", "(", ")", "Change inside () on current line")
+map("ca(", "a", "(", ")", "Change around () on current line")
+
+-- curly braces
+map("ci{", "i", "{", "}", "Change inside {} on current line")
+map("ca{", "a", "{", "}", "Change around {} on current line")
+
+-- brackets
+map("ci[", "i", "[", "]", "Change inside [] on current line")
+map("ca[", "a", "[", "]", "Change around [] on current line")
+
+-- angle brackets
+map("ci<", "i", "<", ">", "Change inside <> on current line")
+map("ca<", "a", "<", ">", "Change around <> on current line")

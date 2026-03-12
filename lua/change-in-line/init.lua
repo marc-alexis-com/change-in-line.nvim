@@ -7,7 +7,7 @@ end
 local ns = vim.api.nvim_create_namespace("change-in-line")
 
 
-local function show_labels(pairs, row, action)
+local function show_labels(pairs, row, action, close_char)
 	for i = 1, #pairs do
 		local mid         = math.floor((pairs[i][1] + pairs[i][2]) / 2)
 		local label_left  = mid - pairs[i][1] - 1
@@ -44,28 +44,45 @@ local function show_labels(pairs, row, action)
 
 	vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
 
-	local keys = vim.api.nvim_replace_termcodes('c' .. action .. '"', true, false, true)
+	local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
 	vim.api.nvim_feedkeys(keys, 'n', false)
 end
 
-function M.change_in_quotes(action)
+local function col_in_pairs(pairs, col)
+	for _, pair in ipairs(pairs) do
+		if col >= pair[1] and col <= pair[2] then
+			return pair
+		end
+	end
+	return nil
+end
+
+function M.change_in_pairs(action, open_char, close_char)
 	local core = require("change-in-line.core")
 	local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 	col = col + 1 -- col is 0-based so add 1 to fit lua's array
 
 	local line = vim.api.nvim_get_current_line()
-	local pairs = core.find_quote_pairs(line)
+	local pairs = core.find_pairs(line, open_char, close_char)
 
 	if #pairs == 0 then
-		vim.notify("No \" pair found :(", vim.log.levels.WARN)
+		vim.notify("No " .. open_char .. close_char .. " pair found :(", vim.log.levels.WARN)
 		return
 	elseif #pairs == 1 then
 		vim.api.nvim_win_set_cursor(0, { row, pairs[1][1] - 1 }) -- match neovim 0-based collumn
 
-		local keys = vim.api.nvim_replace_termcodes('c' .. action .. '"', true, false, true)
+		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
 		vim.api.nvim_feedkeys(keys, 'n', false)
 	else
-		show_labels(pairs, row, action)
+		local current_pair = col_in_pairs(pairs, col)
+		if current_pair then
+			-- on est dans une paire, agir directement
+			vim.api.nvim_win_set_cursor(0, { row, current_pair[1] - 1 })
+			local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
+			vim.api.nvim_feedkeys(keys, 'n', false)
+		else
+			show_labels(pairs, row, action, close_char)
+		end
 	end
 end
 
