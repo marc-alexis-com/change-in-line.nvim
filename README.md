@@ -2,6 +2,8 @@
 
 Neovim plugin that makes `ci`/`ca` work on the current line — even when your cursor is not inside a pair.
 
+![](assets/demo.gif)
+
 ## Features
 
 - Works with `"`, `'`, `` ` ``, `(`, `{`, `[`, `<`
