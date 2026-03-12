@@ -12,7 +12,7 @@ function M.find_pairs(line, open_char, close_char)
 
 		if not is_escaped then
 			if open_char == close_char then
-				if char == open_char then -- ← nouveau check !
+				if char == open_char then
 					if open_pos == nil then
 						open_pos = i
 					else
@@ -21,16 +21,31 @@ function M.find_pairs(line, open_char, close_char)
 					end
 				end
 			else
-				if char == open_char then                    -- ← nouveau check !
-					open_pos = i
-				elseif char == close_char and open_pos ~= nil then -- ← nouveau check !
-					table.insert(pairs, { open_pos, i })
-					open_pos = nil
+				-- asymmetric: use a stack to handle nested pairs
+				if char == open_char then
+					table.insert(pairs, { i, nil }) -- push incomplete pair
+				elseif char == close_char then
+					-- find the last unclosed pair and close it
+					for j = #pairs, 1, -1 do
+						if pairs[j][2] == nil then
+							pairs[j][2] = i
+							break
+						end
+					end
 				end
 			end
 		end
 	end
-	return pairs
+
+	-- remove incomplete pairs (unclosed)
+	local complete = {}
+	for _, pair in ipairs(pairs) do
+		if pair[2] ~= nil then
+			table.insert(complete, pair)
+		end
+	end
+
+	return complete
 end
 
 return M

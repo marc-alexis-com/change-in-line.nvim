@@ -24,16 +24,24 @@ map("ca`", "a", "`", "`", "Change around ` on current line")
 
 -- parentheses
 map("ci(", "i", "(", ")", "Change inside () on current line")
+map("ci)", "i", "(", ")", "Change inside () on current line")
 map("ca(", "a", "(", ")", "Change around () on current line")
+map("ca)", "a", "(", ")", "Change around () on current line")
 
 -- curly braces
 map("ci{", "i", "{", "}", "Change inside {} on current line")
+map("ci}", "i", "{", "}", "Change inside {} on current line")
 map("ca{", "a", "{", "}", "Change around {} on current line")
+map("ca}", "a", "{", "}", "Change around {} on current line")
 
 -- brackets
 map("ci[", "i", "[", "]", "Change inside [] on current line")
+map("ci]", "i", "[", "]", "Change inside [] on current line")
 map("ca[", "a", "[", "]", "Change around [] on current line")
+map("ca]", "a", "[", "]", "Change around [] on current line")
 
 -- angle brackets
 map("ci<", "i", "<", ">", "Change inside <> on current line")
+map("ci>", "i", "<", ">", "Change inside <> on current line")
 map("ca<", "a", "<", ">", "Change around <> on current line")
+map("ca>", "a", "<", ">", "Change around <> on current line")

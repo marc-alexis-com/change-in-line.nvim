@@ -10,8 +10,8 @@ local ns = vim.api.nvim_create_namespace("change-in-line")
 local function show_labels(pairs, row, action, close_char)
 	for i = 1, #pairs do
 		local mid         = math.floor((pairs[i][1] + pairs[i][2]) / 2)
-		local label_left  = mid - pairs[i][1] - 1
-		local label_right = pairs[i][2] - mid - 1
+		local label_left  = math.max(0, mid - pairs[i][1] - 1)
+		local label_right = math.max(0, pairs[i][2] - mid - 1)
 		local label_text  = string.rep("~", label_left) .. tostring(i) ..
 			string.rep("~", label_right)
 
@@ -68,21 +68,21 @@ function M.change_in_pairs(action, open_char, close_char)
 	if #pairs == 0 then
 		vim.notify("No " .. open_char .. close_char .. " pair found :(", vim.log.levels.WARN)
 		return
-	elseif #pairs == 1 then
-		vim.api.nvim_win_set_cursor(0, { row, pairs[1][1] - 1 }) -- match neovim 0-based collumn
+	end
 
+	local current_pair = col_in_pairs(pairs, col)
+	if current_pair then
+		-- already inside a pair, act directly
+		vim.api.nvim_win_set_cursor(0, { row, current_pair[1] - 1 })
+		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
+		vim.api.nvim_feedkeys(keys, 'n', false)
+	elseif #pairs == 1 then
+		-- only one pair, act directly
+		vim.api.nvim_win_set_cursor(0, { row, pairs[1][1] - 1 })
 		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
 		vim.api.nvim_feedkeys(keys, 'n', false)
 	else
-		local current_pair = col_in_pairs(pairs, col)
-		if current_pair then
-			-- on est dans une paire, agir directement
-			vim.api.nvim_win_set_cursor(0, { row, current_pair[1] - 1 })
-			local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
-			vim.api.nvim_feedkeys(keys, 'n', false)
-		else
-			show_labels(pairs, row, action, close_char)
-		end
+		show_labels(pairs, row, action, close_char)
 	end
 end
 
