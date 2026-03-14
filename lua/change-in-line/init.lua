@@ -9,9 +9,16 @@ local ns = vim.api.nvim_create_namespace("change-in-line")
 
 local function show_labels(pairs, row, action, close_char)
 	for i = 1, #pairs do
-		local mid         = math.floor((pairs[i][1] + pairs[i][2]) / 2)
-		local label_left  = math.max(0, mid - pairs[i][1] - 1)
-		local label_right = math.max(0, pairs[i][2] - mid - 1)
+		-- limit label width to the space before any nested pair
+		local available
+		if i < #pairs and pairs[i + 1][1] < pairs[i][2] then
+			available = pairs[i + 1][1] - pairs[i][1] - 1
+		else
+			available = pairs[i][2] - pairs[i][1] - 1
+		end
+
+		local label_left  = math.max(0, math.floor((available - 1) / 2))
+		local label_right = math.max(0, available - 1 - label_left)
 		local label_text  = string.rep("~", label_left) .. tostring(i) ..
 			string.rep("~", label_right)
 
@@ -26,7 +33,7 @@ local function show_labels(pairs, row, action, close_char)
 	local choice = nil
 	while choice == nil do
 		local code = vim.fn.getchar()
-		if code == 27 or code == 58 then -- escape and : key ascii value
+		if code == 27 or code == 58 then -- Esc or :
 			vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
 			return
 		end
@@ -40,7 +47,7 @@ local function show_labels(pairs, row, action, close_char)
 	end
 
 	local pair = pairs[choice]
-	vim.api.nvim_win_set_cursor(0, { row, pair[1] - 1 }) -- match neovim 0-based collumn
+	vim.api.nvim_win_set_cursor(0, { row, pair[1] - 1 }) -- Neovim columns are 0-based
 
 	vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
 
@@ -48,19 +55,20 @@ local function show_labels(pairs, row, action, close_char)
 	vim.api.nvim_feedkeys(keys, 'n', false)
 end
 
-local function col_in_pairs(pairs, col)
+local function pairs_at_col(pairs, col)
+	local result = {}
 	for _, pair in ipairs(pairs) do
 		if col >= pair[1] and col <= pair[2] then
-			return pair
+			table.insert(result, pair)
 		end
 	end
-	return nil
+	return result
 end
 
 function M.change_in_pairs(action, open_char, close_char)
 	local core = require("change-in-line.core")
 	local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-	col = col + 1 -- col is 0-based so add 1 to fit lua's array
+	col = col + 1 -- col is 0-based, add 1 for Lua 1-based indexing
 
 	local line = vim.api.nvim_get_current_line()
 	local pairs = core.find_pairs(line, open_char, close_char)
@@ -70,14 +78,15 @@ function M.change_in_pairs(action, open_char, close_char)
 		return
 	end
 
-	local current_pair = col_in_pairs(pairs, col)
-	if current_pair then
-		-- already inside a pair, act directly
-		vim.api.nvim_win_set_cursor(0, { row, current_pair[1] - 1 })
+	local containing = pairs_at_col(pairs, col)
+
+	if #containing == 1 then
+		vim.api.nvim_win_set_cursor(0, { row, containing[1][1] - 1 })
 		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
 		vim.api.nvim_feedkeys(keys, 'n', false)
+	elseif #containing > 1 then
+		show_labels(containing, row, action, close_char)
 	elseif #pairs == 1 then
-		-- only one pair, act directly
 		vim.api.nvim_win_set_cursor(0, { row, pairs[1][1] - 1 })
 		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
 		vim.api.nvim_feedkeys(keys, 'n', false)

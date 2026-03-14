@@ -1,6 +1,6 @@
 # change-in-line.nvim
 
-Neovim plugin that makes `ci`/`ca` work on the current line — even when your cursor is not inside a pair.
+Neovim plugin that makes `ci`/`ca` work on the current line (even when your cursor is not inside a pair).
 
 ![](assets/demo.gif)
 
@@ -42,7 +42,7 @@ With lazy.nvim:
 ## Known Limitations
 
 - Lines mixing escaped `\"` and regular `"` may produce unexpected results (Neovim's native `ci"` does not handle escaped quotes)
-- Nested pairs like `(foo(bar))` always targets the innermost pair
+- Nested pairs like `(foo(bar))` show labels for each level (cursor inside multiple pairs also triggers label mode)
 - `ci<` handles literal `<>` pairs, not HTML/XML tags (use `cit` for tags)
 - `'` support may conflict with apostrophes in natural language text
 
@@ -51,5 +51,5 @@ With lazy.nvim:
 - [x] Label mode to choose between multiple pairs
 - [x] No labels when already inside a pair
 - [x] Support `"`, `'`, `` ` ``, `(`, `{`, `[`, `<`
-- [ ] Stack-based detection for nested pairs like `(foo(bar))`
+- [x] Stack-based detection for nested pairs like `(foo(bar))`
 - [ ] Treesitter integration for context-aware parsing
