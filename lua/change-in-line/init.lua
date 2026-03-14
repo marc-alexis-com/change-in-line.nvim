@@ -1,13 +1,26 @@
 local M = {}
 
+local defaults = {
+	keymaps   = true,
+	highlight = "WarningMsg",
+	filler    = "~",
+}
+
 function M.setup(opts)
-	M.opts = opts or {}
+	M.opts = vim.tbl_deep_extend("force", defaults, opts or {})
+
+	if M.opts.keymaps then
+		require("change-in-line.keymaps").register()
+	end
 end
 
 local ns = vim.api.nvim_create_namespace("change-in-line")
 
+local function get_opt(key)
+	return M.opts and M.opts[key] or defaults[key]
+end
 
-local function show_labels(pairs, row, action, close_char)
+local function show_labels(pairs, row, operator, action, close_char)
 	for i = 1, #pairs do
 		-- limit label width to the space before any nested pair
 		local available
@@ -17,13 +30,14 @@ local function show_labels(pairs, row, action, close_char)
 			available = pairs[i][2] - pairs[i][1] - 1
 		end
 
-		local label_left  = math.max(0, math.floor((available - 1) / 2))
-		local label_right = math.max(0, available - 1 - label_left)
-		local label_text  = string.rep("~", label_left) .. tostring(i) ..
-			string.rep("~", label_right)
+		local f            = get_opt("filler")
+		local label_left   = math.max(0, math.floor((available - 1) / 2))
+		local label_right  = math.max(0, available - 1 - label_left)
+		local label_text   = string.rep(f, label_left) .. tostring(i) ..
+			string.rep(f, label_right)
 
 		vim.api.nvim_buf_set_extmark(0, ns, row - 1, pairs[i][1], {
-			virt_text = { { label_text, "WarningMsg" } },
+			virt_text     = { { label_text, get_opt("highlight") } },
 			virt_text_pos = "overlay",
 		})
 	end
@@ -38,7 +52,7 @@ local function show_labels(pairs, row, action, close_char)
 			return
 		end
 
-		local char = vim.fn.nr2char(code)
+		local char  = vim.fn.nr2char(code)
 		local index = tonumber(char)
 
 		if index and index >= 1 and index <= #pairs then
@@ -47,11 +61,11 @@ local function show_labels(pairs, row, action, close_char)
 	end
 
 	local pair = pairs[choice]
-	vim.api.nvim_win_set_cursor(0, { row, pair[1] - 1 }) -- Neovim columns are 0-based
+	vim.api.nvim_win_set_cursor(0, { row, pair[1] }) -- position inside the pair, not on the delimiter
 
 	vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
 
-	local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
+	local keys = vim.api.nvim_replace_termcodes(operator .. action .. close_char, true, false, true)
 	vim.api.nvim_feedkeys(keys, 'n', false)
 end
 
@@ -65,12 +79,18 @@ local function pairs_at_col(pairs, col)
 	return result
 end
 
-function M.change_in_pairs(action, open_char, close_char)
+local function act(operator, action, close_char, row, pair)
+	vim.api.nvim_win_set_cursor(0, { row, pair[1] }) -- position inside the pair, not on the delimiter
+	local keys = vim.api.nvim_replace_termcodes(operator .. action .. close_char, true, false, true)
+	vim.api.nvim_feedkeys(keys, 'n', false)
+end
+
+function M.operate_on_pairs(operator, action, open_char, close_char)
 	local core = require("change-in-line.core")
 	local row, col = unpack(vim.api.nvim_win_get_cursor(0))
 	col = col + 1 -- col is 0-based, add 1 for Lua 1-based indexing
 
-	local line = vim.api.nvim_get_current_line()
+	local line  = vim.api.nvim_get_current_line()
 	local pairs = core.find_pairs(line, open_char, close_char)
 
 	if #pairs == 0 then
@@ -81,18 +101,19 @@ function M.change_in_pairs(action, open_char, close_char)
 	local containing = pairs_at_col(pairs, col)
 
 	if #containing == 1 then
-		vim.api.nvim_win_set_cursor(0, { row, containing[1][1] - 1 })
-		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
-		vim.api.nvim_feedkeys(keys, 'n', false)
+		act(operator, action, close_char, row, containing[1])
 	elseif #containing > 1 then
-		show_labels(containing, row, action, close_char)
+		show_labels(containing, row, operator, action, close_char)
 	elseif #pairs == 1 then
-		vim.api.nvim_win_set_cursor(0, { row, pairs[1][1] - 1 })
-		local keys = vim.api.nvim_replace_termcodes('c' .. action .. close_char, true, false, true)
-		vim.api.nvim_feedkeys(keys, 'n', false)
+		act(operator, action, close_char, row, pairs[1])
 	else
-		show_labels(pairs, row, action, close_char)
+		show_labels(pairs, row, operator, action, close_char)
 	end
+end
+
+-- backward-compatible alias
+function M.change_in_pairs(action, open_char, close_char)
+	M.operate_on_pairs("c", action, open_char, close_char)
 end
 
 return M
